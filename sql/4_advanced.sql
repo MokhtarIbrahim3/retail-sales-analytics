@@ -1,1 +1,111 @@
+-------------------------------------
+--Top products
+-------------------------------------
+SELECT TOP 5 P.PRODUCT_NAME,
+       SUM(F.SALES_AMOUNT) AS TOTAL_REVENUE
+FROM GOLD.FACT_SALES F
+JOIN GOLD.DIM_PRODUCTS P
+ON F.PRODUCT_KEY = P.PRODUCT_KEY
+GROUP BY P.PRODUCT_NAME
+ORDER BY TOTAL_REVENUE DESC;
 
+-------------------------------------
+--Worst products
+-------------------------------------
+SELECT TOP 5 P.PRODUCT_NAME,
+       SUM(F.SALES_AMOUNT) AS TOTAL_REVENUE
+FROM GOLD.FACT_SALES F
+JOIN GOLD.DIM_PRODUCTS P
+ON F.PRODUCT_KEY = P.PRODUCT_KEY
+GROUP BY P.PRODUCT_NAME
+ORDER BY TOTAL_REVENUE ASC;
+
+-------------------------------------
+--Top customers ranking
+-------------------------------------
+SELECT *
+FROM (
+    SELECT 
+        C.CUSTOMER_KEY,
+        C.FIRST_NAME,
+        SUM(F.SALES_AMOUNT) AS TOTAL_REVENUE,
+        DENSE_RANK() OVER(ORDER BY SUM(F.SALES_AMOUNT) DESC) AS RNK
+    FROM GOLD.FACT_SALES F
+    JOIN GOLD.DIM_CUSTOMERS C
+    ON F.CUSTOMER_KEY = C.CUSTOMER_KEY
+    GROUP BY C.CUSTOMER_KEY, C.FIRST_NAME
+) T
+WHERE RNK <= 10;
+
+-------------------------------------
+--Country ranking
+-------------------------------------
+SELECT C.COUNTRY,
+       SUM(F.SALES_AMOUNT) AS TOTAL_REVENUE
+FROM GOLD.FACT_SALES F
+JOIN GOLD.DIM_CUSTOMERS C
+ON F.CUSTOMER_KEY = C.CUSTOMER_KEY
+GROUP BY C.COUNTRY
+ORDER BY TOTAL_REVENUE DESC;
+
+-------------------------------------
+--Customer Segmentation (RFM)
+-------------------------------------
+WITH RFM AS (
+    SELECT 
+        CUSTOMER_KEY,
+        DATEDIFF(DAY, MAX(ORDER_DATE), GETDATE()) AS RECENCY,
+        COUNT(DISTINCT ORDER_NUMBER) AS FREQUENCY,
+        SUM(SALES_AMOUNT) AS MONETARY
+    FROM GOLD.FACT_SALES
+    GROUP BY CUSTOMER_KEY
+)
+SELECT *,
+       CASE 
+            WHEN MONETARY >= 10000 THEN 'VIP'
+            WHEN MONETARY >= 5000 THEN 'LOYAL'
+            WHEN MONETARY >= 2000 THEN 'REGULAR'
+            ELSE 'LOW VALUE'
+       END AS CUSTOMER_SEGMENT
+FROM RFM;
+
+-------------------------------------
+--Monthly Growth Rate
+-------------------------------------
+WITH MONTHLY_SALES AS (
+    SELECT 
+        YEAR(ORDER_DATE) AS YEAR,
+        MONTH(ORDER_DATE) AS MONTH,
+        SUM(SALES_AMOUNT) AS TOTAL_SALES
+    FROM GOLD.FACT_SALES
+    GROUP BY YEAR(ORDER_DATE), MONTH(ORDER_DATE)
+)
+SELECT *,
+       LAG(TOTAL_SALES) OVER(ORDER BY YEAR, MONTH) AS PREV_MONTH,
+       (TOTAL_SALES - LAG(TOTAL_SALES) OVER(ORDER BY YEAR, MONTH)) * 1.0 /
+       LAG(TOTAL_SALES) OVER(ORDER BY YEAR, MONTH) AS GROWTH_RATE
+FROM MONTHLY_SALES;
+
+-------------------------------------
+--Top Products Share
+-------------------------------------
+SELECT 
+    P.PRODUCT_NAME,
+    SUM(F.SALES_AMOUNT) AS REVENUE,
+    SUM(SUM(F.SALES_AMOUNT)) OVER() AS TOTAL_REVENUE,
+    SUM(F.SALES_AMOUNT) * 1.0 / SUM(SUM(F.SALES_AMOUNT)) OVER() AS CONTRIBUTION_PERCENT
+FROM GOLD.FACT_SALES F
+JOIN GOLD.DIM_PRODUCTS P
+ON F.PRODUCT_KEY = P.PRODUCT_KEY
+GROUP BY P.PRODUCT_NAME
+ORDER BY CONTRIBUTION_PERCENT DESC;
+-------------------------------------
+--Running Total
+-------------------------------------
+SELECT 
+    ORDER_DATE,
+    SUM(SALES_AMOUNT) AS DAILY_SALES,
+    SUM(SUM(SALES_AMOUNT)) OVER (ORDER BY ORDER_DATE) AS RUNNING_TOTAL
+FROM GOLD.FACT_SALES
+GROUP BY ORDER_DATE
+ORDER BY ORDER_DATE;
