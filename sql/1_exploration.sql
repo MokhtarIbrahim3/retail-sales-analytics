@@ -1,27 +1,22 @@
 --DATABASE EXPLORATION
------------------------------------
---EXPLORE ALL OBJECTS IN THE DATABASE
+------------------------------------------
 SELECT * FROM INFORMATION_SCHEMA.TABLES
 
---EXPLORE ALL COLUMNS IN THE DATABASE
 SELECT * FROM INFORMATION_SCHEMA.COLUMNS
 
---EXPLORE ALL COLUMNS IN A SPECIFIC TABLE
 SELECT * FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_NAME = 'fact_sales'
 
 -------------------------------------------
 --DIMENSION EXPLORATION
 -------------------------------------------
---EXPLORE ALL COUNTRIES OUR CUSTOMERS COME FROM
 SELECT DISTINCT COUNTRY
 FROM gold.dim_customers
 
-
---EXPLORE ALL CATEGORIES
 SELECT DISTINCT CATEGORY,SUBCATEGORY,PRODUCT_NAME
 FROM GOLD.DIM_PRODUCTS
----------------------------------------------
+-------------------------------------------
 --Customer & product counts
+-------------------------------------------
 SELECT COUNT(*) FROM GOLD.DIM_CUSTOMERS;
 SELECT COUNT(*) FROM GOLD.DIM_PRODUCTS;
